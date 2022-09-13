@@ -8,8 +8,6 @@ import sympy as sp
 import matplotlib.pyplot as plt
 import doctest
 
-METHODOLOGY = 0  # 0 to believe in statistics, 1 to believe in instincts
-
 
 def retrieve_name(var) -> str:
     """
@@ -136,12 +134,12 @@ class ExData():
     Experimental data with uncertainty.
     """
 
-    def __init__(self,  data: str = None) -> None:
+    def __init__(self,  data: str = None, unc: str = None) -> None:
         """
-        Creates a new ExData with value data. All digits are considered
-        significant and uncertainty is taken to be half of the lowest digit.
-        Only suitable for scientific notation.
+        Creates a new ExData with value and uncertainty data.
         If data is left blank, returns a blank ExData.
+        If unc is left blank, all digits are considered significant and
+        uncertainty is taken to be the lowest digit.
 
         >>> length = ExData('1.00')
         >>> length.value
@@ -149,43 +147,37 @@ class ExData():
         >>> length.sig_fig
         Decimal('3')
         >>> length.unc
-        Decimal('0.005')
+        Decimal('0.01')
+        >>> mass = ExData('13.010')
+        >>> mass.value
+        Decimal('13.010')
+        >>> mass.sig_fig
+        Decimal('5')
+        >>> mass.unc
+        Decimal('0.001')
+        >>> time = ExData('5.21', '0.2')
+        >>> time.value
+        Decimal('5.21')
+        >>> time.sig_fig
+        Decimal('2')
+        >>> time.unc
+        Decimal('0.2')
         """
 
-        if data is not None:
+        if data is not None and unc is None:
             self.value = D(str(data))
             self.sig_fig = D(len(data.replace('.', '')))
             low_digit = get_low_digit(self.value, self.sig_fig)
-            self.unc = D('0.5') * D('10') ** D(str(low_digit))
-        else:
+            self.unc = D('10') ** D(str(low_digit))
+        elif data is not None and unc is not None:
+            self.value = D(str(data))
+            self.sig_fig = D(get_high_digit(self.value) -
+                             get_high_digit(unc) + 1)
+            self.unc = D(unc)
+        elif data is None:
             self.value = D('0')
             self.sig_fig = D('0')
             self.unc = D('0')
-
-    def from_zeros(data: float, zeroes: int) -> 'ExData':
-        """
-        Returns a new ExData with value data and specified amount of significant
-        zeroes. Uncertainty is taken to be half of the lowest significant digit.
-
-        >>> length = ExData.from_zeros(100, 1)
-        >>> weight = ExData.from_zeros(0.200, 1)
-        >>> speed = ExData.from_zeros(0.3, 2)
-        >>> length.value
-        Decimal('100')
-        >>> length.sig_fig
-        Decimal('2')
-        >>> weight.unc
-        Decimal('0.005')
-        >>> speed.unc
-        Decimal('0.0005')
-        """
-
-        E = ExData()
-        E.value = D(str(data))
-        E.sig_fig = D(len(str(data).replace('.', '').strip('0')) + zeroes)
-        low_digit = get_low_digit(E.value, E.sig_fig)
-        E.unc = D('0.5') * D('10') ** D(str(low_digit))
-        return E
 
     def from_specified(data_value: str, data_sig_fig: int, data_unc: str) -> \
             'ExData':
@@ -214,7 +206,7 @@ class ExData():
 
         >>> length = ExData('1.230')
         >>> str(length)
-        'length: value 1.230, sig. figs. 4, uncertainty 0.0005'
+        'length: value 1.230, sig. figs. 4, uncertainty 0.001'
         """
 
         return '{0}: value {1}, sig. figs. {2}, uncertainty {3}'.format(
@@ -227,7 +219,7 @@ class ExData():
         with the same value, sig_fig, and unc.
 
         >>> length_a = ExData('1.230')
-        >>> length_b = ExData.from_zeros('1.23', 1)
+        >>> length_b = ExData('1.23', '0.001')
         >>> length_a == length_b
         True
         """
@@ -244,14 +236,14 @@ class ExData():
         """
         Returns a new ExData with factor.
 
-        >>> reduced_length = ExData.from_zeros(1.0010, 1)
+        >>> reduced_length = ExData('1.0010')
         >>> actual_length = reduced_length * (10 ** 4)
         >>> actual_length.value
-        Decimal('10010.000')
+        Decimal('10010.0000')
         >>> actual_length.sig_fig
         Decimal('5')
         >>> actual_length.unc
-        Decimal('0.50000')
+        Decimal('1.0000')
         """
 
         if isinstance(__o, (int, float)):
@@ -282,71 +274,60 @@ class EDLst(list):
         for data in data_set:
             self.append(data)
 
-    def record(self, low_digit: int, *data_set: float, unc=-1) -> None:
+    def record(self, unc: float, *data_set: float) -> None:
         """
         Modifies self using data_set. The lowest significant figure is
-        specified by low_digit. Negative uncertainty indicates default
-        uncertainty taken to be half of the lowest significant digit.
+        specified by unc.
 
         >>> length_lst = EDLst()
-        >>> length_lst.record(-2, 1.01, 1.30, 1.23, 1.40)
+        >>> length_lst.record(0.02, 1.01, 1.30, 1.23, 1.40)
         >>> length_lst[1].value
         Decimal('1.3')
         >>> length_lst[1].sig_fig
         Decimal('3')
         >>> length_lst[1].unc
-        Decimal('0.005')
+        Decimal('0.02')
         """
 
-        if unc < 0:
-            unc = str(D(0.5) * D(10) ** D(low_digit))
         for data in data_set:
             self.append(ExData.from_specified(
-                str(data), get_high_digit(data) - low_digit + 1, str(unc)))
+                str(data), get_high_digit(data) - get_high_digit(unc) + 1, str(unc)))
 
-    def get_stats(self, methodology=METHODOLOGY) -> 'ExData':
+    def get_stats(self) -> 'ExData':
         """
         Returns a new ExData representing the mean of data_lst.
 
         >>> length_lst = EDLst()
-        >>> length_lst.record(-1, 1.0, 1.1, 1.2, 1.1)
-        >>> mean_length = length_lst.get_stats(0)
-        The mean of length_lst is 1.10; the uncertainty in the mean is 0.05.
+        >>> length_lst.record(0.1, 1.0, 1.1, 1.2, 1.1)
+        >>> mean_length = length_lst.get_stats()
+        The mean of length_lst is 1.10; the uncertainty in the mean is 0.11.
         >>> mean_length.value
         Decimal('1.10')
         >>> mean_length.unc
-        Decimal('0.05')
+        Decimal('0.11')
         >>> mean_length.sig_fig
         Decimal('3')
-        >>> mean_length = length_lst.get_stats(1)
-        The mean of length_lst is 1.1; the uncertainty in the mean is 0.1.
-        >>> mean_length.value
-        Decimal('1.1')
-        >>> mean_length.unc
-        Decimal('0.1')
-        >>> mean_length.sig_fig
-        Decimal('2')
         """
 
         mean = sum(data.value for data in self) / D(len(self))
-        unc = (sum((data.value - mean) ** D('2') for data in self) /
+        unc_a = (sum((data.value - mean) ** D('2') for data in self) /
                D(len(self) - 1)) ** D('0.5') / (D(len(self))) ** D('0.5')
-        if get_high_digit(unc) != 1:
+        unc_b = D(self[0].unc)
+        unc = (unc_a ** D('2') + unc_b ** D('2')) ** D('0.5')
+
+        if get_high_digit_val(unc) != 1:
             u_sig_fig = 1
         else:
             u_sig_fig = 2
         unc = get_ceil(unc, get_high_digit(unc) - u_sig_fig + 1)
-        if methodology == 1:
-            unc = max(
-                D('10') ** D(get_low_digit(self[0].value, self[0].sig_fig)), unc)
+        
         mean = get_round(mean, get_low_digit(unc, u_sig_fig))
         sig_fig = get_high_digit(mean) - get_high_digit(unc) + u_sig_fig
         print('The mean of {0} is {1}; the uncertainty in the mean is {2}.'.format(
             retrieve_name(self), str(mean), str(unc)))
         return ExData.from_specified(str(mean), sig_fig, str(unc))
 
-    def u_prop(self, func: str, var_names='x y z a b c d',
-               methodology=METHODOLOGY) -> 'ExData':
+    def u_prop(self, func: str, var_names: str = 'x y z a b c d') -> 'ExData':
         """
         Returns a new ExData representing evaluation of function func
         with variables in self. Variables in self have symbols in var_names
