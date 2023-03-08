@@ -6,7 +6,7 @@
 License: *TBA*  
 
 <s>An [example](https://htmlpreview.github.io/?https://github.com/MFGJT/ManyiStats/blob/main/Torsion%20Pendulum.html) is provided.</s>  
-An updated example will be posted.
+An updated example will (likely not) be posted.
 
 Contributions through pull requests and [e-mail](mailto:henry1911@foxmail.com) are encouraged.  
 |   Name   |  Position   |
