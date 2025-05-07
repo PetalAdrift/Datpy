@@ -1,0 +1,8 @@
+cff-version: 1.0.0
+message: "This package was designed to help integrate certain key and elementary methods in data analysis in physics laboratory settings. If you have found it helpful in your work, a citation is encouraged."
+authors:
+  - family-names:
+    given-names: Hoyii
+title: "Datpy"
+version: 1.0.0
+date-released: 2024-09-24
