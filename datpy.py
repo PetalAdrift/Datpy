@@ -533,7 +533,8 @@ def get_best_fit_odr(
             + PLOT_STEP_SCALE * x_range,
             PLOT_STEP_SCALE * x_range,
         ):
-            params = [popt, x_val]
+            params = [x_val]
+            params.extend(popt)
             plot_predicted.append([x_val, fit_func(*params)])
 
     y_predicted = np.array(y_predicted, dtype=float)
@@ -1081,20 +1082,20 @@ def create_axis_histogram(
     if distribution[0] == get_gauss:
         full_width = 2 * np.sqrt(2 * np.log(2)) * popt[2]
         text = (
-            f"$\mu$ = {str(keep_digits(D(popt[1]), 3))} "
-            + f"{x_unit_label}\n"
-            + f"FWHM = {str(keep_digits(D(full_width), 3))} "
-            + f"{x_unit_label}\n"
-            + f"$\chi^2$/DOF = {chi[1]:.2f}\n"
-            + f"$\chi^2$ probability = {chi[2]:.2f}\n"
+            rf"$\mu$ = {str(keep_digits(D(popt[1]), 3))} "
+            + rf"{x_unit_label}\n"
+            + rf"FWHM = {str(keep_digits(D(full_width), 3))} "
+            + rf"{x_unit_label}\n"
+            + rf"$\chi^2$/DOF = {chi[1]:.2f}\n"
+            + rf"$\chi^2$ probability = {chi[2]:.2f}\n"
         )
     else:
         text = (
-            f"$\mu$ = {str(keep_digits(D(popt[1]), 3))} "
-            + f"{x_unit_label}\n"
-            + f"{x_unit_label}\n"
-            + f"$\chi^2$/DOF = {chi[1]:.2f}\n"
-            + f"$\chi^2$ probability = {chi[2]:.2f}\n"
+            rf"$\mu$ = {str(keep_digits(D(popt[1]), 3))} "
+            + rf"{x_unit_label}\n"
+            + rf"{x_unit_label}\n"
+            + rf"$\chi^2$/DOF = {chi[1]:.2f}\n"
+            + rf"$\chi^2$ probability = {chi[2]:.2f}\n"
         )
     add_simple_plot(
         fig,
